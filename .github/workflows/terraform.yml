@@ -3,14 +3,19 @@ name: Terraform CI/CD Pipeline
 on:
   push:
     branches:
-      - dev  # Run on push to main branch
+      - develop  # Run on push to develop branch (for dev environment)
+      - main     # Run on push to main branch (for prod environment)
   pull_request:
     branches:
-      - dev  # Run on pull requests targeting the main branch
+      - develop  # Run on pull requests targeting the develop branch (for dev environment)
+      - main     # Run on pull requests targeting the main branch (for prod environment)
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
+
+    # Dynamically set the environment based on the branch (develop or main)
+    environment: ${{ github.ref == 'refs/heads/develop' && 'dev' || 'prod' }} 
 
     steps:
       # Step 1: Check out the code from the repository
@@ -31,10 +36,14 @@ jobs:
         with:
           terraform_version: 1.5.0  # Specify the Terraform version you want to use
 
-      # Step 4: Run terraform init
+      # Step 4: Terraform Init (with different backend config based on environment)
       - name: Terraform Init
         run: |
-          terraform init --backend-config=./config/dev-backend-config.hcl
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            terraform init --backend-config=./config/dev-backend-config.hcl
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            terraform init --backend-config=./config/prod-backend-config.hcl
+          fi
 
       # Step 5: Check Terraform formatting
       - name: Terraform Format Check
@@ -44,10 +53,20 @@ jobs:
       - name: Terraform Format
         run: terraform fmt
 
-      # Step 7: Terraform Plan (creating a plan file)
+      # Step 7: Terraform Plan (creating a plan file with the correct variable file based on the environment)
       - name: Terraform Plan
-        run: terraform plan -out dev-tfplan -var-file="./variables/dev.tfvars" -input=false
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            terraform plan -out dev-tfplan -var-file="./variables/dev.tfvars" -input=false
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            terraform plan -out prod-tfplan -var-file="./variables/prod.tfvars" -input=false
+          fi
 
-      # Step 8: Terraform Apply (apply the plan to AWS)
+      # Step 8: Terraform Apply (apply the plan to AWS with the correct plan file)
       - name: Terraform Apply
-        run: terraform apply dev-tfplan -auto-approve -input=false
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            terraform apply dev-tfplan -auto-approve -input=false
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            terraform apply prod-tfplan -auto-approve -input=false
+          fi
