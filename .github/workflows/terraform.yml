@@ -69,7 +69,7 @@ jobs:
       - name: Terraform Apply
         run: |
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            terraform apply dev-tfplan -auto-approve -input=false
+            terraform apply "dev-tfplan" -auto-approve -input=false
           elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            terraform apply prod-tfplan -auto-approve -input=false
+            terraform apply "prod-tfplan" -auto-approve -input=false
           fi
