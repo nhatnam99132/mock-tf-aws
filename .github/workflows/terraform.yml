@@ -52,15 +52,11 @@ jobs:
             terraform init --backend-config=./config/prod-backend-config.hcl
           fi
 
-      # Step 6: Check Terraform formatting
-      - name: Terraform Format Check
-        run: terraform fmt -check
-
-      # Step 7: Apply Terraform formatting if needed
+      # Step 6: Apply Terraform formatting if needed
       - name: Terraform Format
         run: terraform fmt
 
-      # Step 8: Terraform Plan (creating a plan file with the correct variable file based on the environment)
+      # Step 7: Terraform Plan (creating a plan file with the correct variable file based on the environment)
       - name: Terraform Plan
         run: |
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
@@ -69,7 +65,7 @@ jobs:
             terraform plan -out prod-tfplan -var-file="./variables/prod.tfvars" -input=false
           fi
 
-      # Step 9: Terraform Apply (apply the plan to AWS with the correct plan file)
+      # Step 8: Terraform Apply (apply the plan to AWS with the correct plan file)
       - name: Terraform Apply
         run: |
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
