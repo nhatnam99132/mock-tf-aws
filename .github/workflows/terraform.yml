@@ -1,0 +1,53 @@
+name: Terraform CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - dev  # Run on push to main branch
+  pull_request:
+    branches:
+      - dev  # Run on pull requests targeting the main branch
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Set up AWS CLI with credentials from GitHub Secrets
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}  # You can set the region in Secrets or hardcode it
+
+      # Step 3: Set up Terraform (if not already installed on the runner)
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.5.0  # Specify the Terraform version you want to use
+
+      # Step 4: Run terraform init
+      - name: Terraform Init
+        run: |
+          terraform init --backend-config=./config/dev-backend-config.hcl
+
+      # Step 5: Check Terraform formatting
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      # Step 6: Apply Terraform formatting if needed
+      - name: Terraform Format
+        run: terraform fmt
+
+      # Step 7: Terraform Plan (creating a plan file)
+      - name: Terraform Plan
+        run: terraform plan -out dev-tfplan -var-file="./variables/dev.tfvars" -input=false
+
+      # Step 8: Terraform Apply (apply the plan to AWS)
+      - name: Terraform Apply
+        run: terraform apply dev-tfplan -auto-approve -input=false
