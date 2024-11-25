@@ -36,7 +36,14 @@ jobs:
         with:
           terraform_version: 1.5.0  # Specify the Terraform version you want to use
 
-      # Step 4: Terraform Init (with different backend config based on environment)
+      # Step 4: Set environment variables from GitHub Secrets for Terraform
+      - name: Set Terraform Environment Variables
+        run: |
+          echo "TF_VAR_password=${{ secrets.PASSWORD }}" >> $GITHUB_ENV
+          echo "TF_VAR_role_arn=${{ secrets.ROLE_ARN }}" >> $GITHUB_ENV
+          echo "TF_VAR_db_password=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
+
+      # Step 5: Terraform Init (with different backend config based on environment)
       - name: Terraform Init
         run: |
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
@@ -45,15 +52,15 @@ jobs:
             terraform init --backend-config=./config/prod-backend-config.hcl
           fi
 
-      # Step 5: Check Terraform formatting
+      # Step 6: Check Terraform formatting
       - name: Terraform Format Check
         run: terraform fmt -check
 
-      # Step 6: Apply Terraform formatting if needed
+      # Step 7: Apply Terraform formatting if needed
       - name: Terraform Format
         run: terraform fmt
 
-      # Step 7: Terraform Plan (creating a plan file with the correct variable file based on the environment)
+      # Step 8: Terraform Plan (creating a plan file with the correct variable file based on the environment)
       - name: Terraform Plan
         run: |
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
@@ -62,7 +69,7 @@ jobs:
             terraform plan -out prod-tfplan -var-file="./variables/prod.tfvars" -input=false
           fi
 
-      # Step 8: Terraform Apply (apply the plan to AWS with the correct plan file)
+      # Step 9: Terraform Apply (apply the plan to AWS with the correct plan file)
       - name: Terraform Apply
         run: |
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
